@@ -4,6 +4,25 @@ const app = express();
 
 app.use(express.json())
 
+const loggingMiddleware = (req, res, next) => {
+  console.log(`${req.method} - ${req.url}`);
+  next();
+};
+
+//app.use(loggingMiddleware);
+
+const resolveIndexByUserId = (req, res, next) => {
+  const { params: {id}} = req; //destrucure req
+  const parsedId = parseInt(id); 
+  if(isNaN(parsedId)) 
+    return res.sendStatus(400); //send bad request if id is NaN
+  const findUserIndex = mockUsers.findIndex((user) => user.id === parsedId); 
+  if (findUserIndex === -1) // -1 is the value if user is not existing
+    return res.sendStatus(404);
+  req.findUserIndex = findUserIndex; //pass the value of findUserIndex to next function
+  next();
+}
+
 const PORT = process.env.PORT || 3000;
 
 const mockUsers = [
@@ -11,7 +30,7 @@ const mockUsers = [
   {id: 2, username: "lawrence" ,display: "Lawrence"},
   {id: 3, username: "w" ,display: "w"},
 ]
-app.get('/', (request, response) =>{
+app.get('/', loggingMiddleware, (request, response) =>{
   response.status(201).send({msg:"Hello World!"});
 }); //routes and request handler, request object and response object 
 
@@ -31,23 +50,16 @@ app.get('/api/users', (req, res) => {
 }) // /api prefix is good practice
 
 app.post('/api/users', (req,res)=> {
-  const {body} = req;
+  const {body} = req; // destructure req to use the values
   const newUser = {id:mockUsers[mockUsers.length-1].id+1, ...body};
-  mockUsers.push(newUser);
+  mockUsers.push(newUser); // add new user to array
   return res.status(201).send(newUser);
 });
 
 // u can have one or more params to present dynamic data
-app.get('/api/users/:id', (req,res) => {
-  console.log(req.params);
-  const parsedId = parseInt(req.params.id)
-  console.log(parsedId)
-  //if id is not a number
-  if (isNaN(parsedId))
-    return res.status(400).send({ msg: "BAD REQUEST!"});
-
-  //find the user inside mockUsers array
-  const findUser = mockUsers.find((user) => user.id === parsedId);
+app.get('/api/users/:id', resolveIndexByUserId, (req,res) => {
+  const {findUserIndex} = req;
+  const findUser = mockUsers[findUserIndex];
   //if not found
   if (!findUser) 
     return res.sendStatus(404);
@@ -55,26 +67,35 @@ app.get('/api/users/:id', (req,res) => {
   return res.send(findUser)
 });
 
-app.get('/api/products', (req,res) => {
-  res.send([
-    {id: 123, name: "sugar", price: 10}
-  ])
+
+app.put('/api/users/:id', resolveIndexByUserId, (req, res) => {
+  const {body, findUserIndex} = req; // findUserIndex is from middleware, body is from thunderclient
+  
+  mockUsers[findUserIndex] = {id: mockUsers[findUserIndex].id, ...body}; //update all values of index number found except id 
+  return res.sendStatus(200);
 });
 
-app.put('/api/users/:id', (req, res) => {
-  const {body, params: {id},} = req;
+app.patch('/api/users/:id',resolveIndexByUserId, (req, res) => {
+  const {body, findUserIndex} = req; //destrucure req
+  
+  // take the existing values THEN add/override the new values 
+  mockUsers[findUserIndex] = {...mockUsers[findUserIndex], ...body}
+  return res.sendStatus(200);
+})
+
+//req body is not really necessary in DELETE
+app.delete('/api/users/:id', (req, res) => { 
+  const { params: {id}} = req;
   const parsedId = parseInt(id);
-  if(isNaN(parsedId)) 
+  if (isNaN(parsedId))
     return res.sendStatus(400);
 
   const findUserIndex = mockUsers.findIndex((user) => user.id === parsedId);
-
   if (findUserIndex === -1)
-    return res.sendStatus(404);
-
-  mockUsers[findUserIndex] = {id: parsedId, ...body};
+    return res.sendStatus(404);   
+  mockUsers.splice(findUserIndex);
   return res.sendStatus(200);
-});
+})
 app.listen(PORT, () => {
   console.log(`Running on port ${PORT}`)
 })
