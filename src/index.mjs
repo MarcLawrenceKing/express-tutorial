@@ -1,4 +1,6 @@
 import express from 'express';
+import { query, validationResult, body, matchedData , checkSchema, check} from 'express-validator';
+import {createUserValidationSchema} from './utils/validationSchema.mjs'
 
 const app = express();
 
@@ -34,11 +36,19 @@ app.get('/', loggingMiddleware, (request, response) =>{
   response.status(201).send({msg:"Hello World!"});
 }); //routes and request handler, request object and response object 
 
-app.get('/api/users', (req, res) => {
-  console.log(req.query) //gets all queries
+app.get('/api/users', 
+  query('filter')
+  .isString()
+  .notEmpty()
+  .withMessage('must not be empty!')
+  .isLength({min: 3, max:10})
+  .withMessage('must be between 3 to 30 characters!'), (req, res) => {
+  //console.log(req.query) //gets all queries
   // example finding substring 'ma'
   // http://localhost:3000/api/users?filter=username&value=ma
 
+  const result = validationResult(req);
+  console.log(result)
   // destructure 
   const { query: {filter,value},} = req;
     
@@ -49,9 +59,16 @@ app.get('/api/users', (req, res) => {
   
 }) // /api prefix is good practice
 
-app.post('/api/users', (req,res)=> {
-  const {body} = req; // destructure req to use the values
-  const newUser = {id:mockUsers[mockUsers.length-1].id+1, ...body};
+app.post('/api/users', checkSchema(createUserValidationSchema), (req,res)=> {
+  const result = validationResult(req);
+  console.log(result)
+  
+  if(!result.isEmpty())
+    return res.status(400).send({errors: result.array()}); // print the errors  
+  
+  const data = matchedData(req); // this is the validated data
+
+  const newUser = {id:mockUsers[mockUsers.length-1].id+1, ...data};
   mockUsers.push(newUser); // add new user to array
   return res.status(201).send(newUser);
 });
