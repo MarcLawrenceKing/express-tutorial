@@ -11,6 +11,6 @@ router.get('/api/products', (req, res) =>{
     return res.send({msg:"Hello World!"});
   return res.send({msg:"you dont have the correct cookie"})
   
-}); //routes and request handler, request object and response object 
+}); // routes and request handler, request object and response object 
 
 export default router;
