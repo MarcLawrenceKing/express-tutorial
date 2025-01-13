@@ -44,3 +44,13 @@ app.post('/api/auth', (req, res) => {
   req.session.user = findUser;
   return res.status(200).send(findUser);
 });
+
+app.get('/api/auth/status', (req, res) => {
+  req.sessionStore.get(req.sessionID, (err, session) => {
+    console.log(session);
+  })
+  return req.session.user
+  ? res.status(200).send(req.session.user)
+  : res.status(401).send({msg: 'not authenticated!'});
+  
+} ) 
