@@ -54,3 +54,22 @@ app.get('/api/auth/status', (req, res) => {
   : res.status(401).send({msg: 'not authenticated!'});
   
 } ) 
+
+app.post('/api/cart', (req, res) => {
+  if(!req.session.user) return res.sendStatus(401);
+
+  const {body:item} = req;
+  const {cart} = req.session;
+
+  if(cart){
+    cart.push(item);
+  } else {
+    req.session.cart = [item];
+  }
+  return res.status(201).send(item);
+})
+
+app.get('/api/cart', (req, res) => {
+  if(!req.session.user) return res.sendStatus(401);
+  return res.send(req.session.cart ?? [])
+})
