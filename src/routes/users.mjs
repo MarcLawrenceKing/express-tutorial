@@ -3,6 +3,7 @@ import { query, validationResult, checkSchema, matchedData } from "express-valid
 import {mockUsers} from "../utils/constants.mjs"
 import { createUserValidationSchema } from "../utils/validationSchema.mjs";
 import { resolveIndexByUserId } from "../utils/middlewares.mjs";
+import { User } from "../mongoose/schemas/user.mjs";
 
 const router = Router();
 
@@ -40,18 +41,21 @@ router.get('/api/users',
   
 }) ;// /api prefix is good practice
 
-router.post('/api/users', checkSchema(createUserValidationSchema), (req,res)=> {
-  const result = validationResult(req);
-  console.log(result)
-  
-  if(!result.isEmpty())
-    return res.status(400).send({errors: result.array()}); // print the errors  
-  
-  const data = matchedData(req); // this is the validated data
+router.post('/api/users', checkSchema(createUserValidationSchema), async (req,res) => {
+  const result = validationResult(req)
+  // if result is not empty, send error
+  if(!result.isEmpty()) return res.status(400).send(result.array());
 
-  const newUser = {id:mockUsers[mockUsers.length-1].id+1, ...data};
-  mockUsers.push(newUser); // add new user to array
-  return res.status(201).send(newUser);
+  const data = matchedData(req);
+  const newUser = new User(data);
+  try {
+    const savedUser = await newUser.save();
+    return res.status(201).send(savedUser)
+  } catch (err) {
+    console.log(err);
+    return response.sendStatus(400);
+  }
+  
 });
 
 router.get('/api/users/:id', resolveIndexByUserId, (req,res) => {
