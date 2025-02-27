@@ -15,19 +15,15 @@ router.get('/api/users',
   .withMessage('must not be empty!')
   .isLength({min: 3, max:10})
   .withMessage('must be between 3 to 30 characters!'), (req, res) => {
-  //console.log(req.query) //gets all queries
-  // example finding substring 'ma'
-  // http://localhost:3000/api/users?filter=username&value=ma
 
-  console.log(req.session);
   console.log(req.session.id); //test session id
-
   // we can pass any session id in sessionStore and get the data
   req.sessionStore.get(req.session.id, (err, sessionData) => {
     if (err){
       console.log(err);
       throw err;
     }
+    console.log("Inside session store get")
     console.log(sessionData)
   })
   const result = validationResult(req);
